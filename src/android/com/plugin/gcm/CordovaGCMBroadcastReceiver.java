@@ -52,9 +52,12 @@ public class CordovaGCMBroadcastReceiver extends WakefulBroadcastReceiver {
 					// if we are in the foreground, just surface the payload, else post it to the statusbar
 					if (PushPlugin.isInForeground()) {
 						extras.putBoolean("foreground", true);
-						PushPlugin.sendExtras(extras);
+						PushPlugin.putExtrasToList(extras);
+						PushPlugin.sendExtrasNow();
 					} else {
+						PushPlugin.setFlagBackgroundNotification(true);
 						extras.putBoolean("foreground", false);
+						PushPlugin.putExtrasToList(extras);
 
 						// Send a notification if there is a message
 						if (extras.getString("message") != null && extras.getString("message").length() != 0) {
@@ -104,6 +107,15 @@ public class CordovaGCMBroadcastReceiver extends WakefulBroadcastReceiver {
 			} catch (NumberFormatException ignore) {
 			}
 		}
+		JSONObject jobj;
+        String nmessage = "";
+        try {
+            jobj = new JSONObject(extras.getString("message"));
+            nmessage = jobj.getString("m");
+        } catch (JSONException ex) {
+            Log.d(TAG, "JSONException: " + ex.getMessage());
+            return;
+        }
 
 		NotificationCompat.Builder mBuilder =
 				new NotificationCompat.Builder(context)
@@ -118,7 +130,8 @@ public class CordovaGCMBroadcastReceiver extends WakefulBroadcastReceiver {
 
 		String message = extras.getString("message");
 		if (message != null) {
-			mBuilder.setContentText(message);
+			//mBuilder.setContentText(message);
+			mBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(nmessage));
 		} else {
 			mBuilder.setContentText("<missing message content>");
 		}

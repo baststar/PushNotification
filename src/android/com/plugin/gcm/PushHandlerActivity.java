@@ -48,7 +48,9 @@ public class PushHandlerActivity extends Activity
             originalExtras.putBoolean("foreground", false);
             originalExtras.putBoolean("coldstart", !isPushPluginActive);
 
-			PushPlugin.sendExtras(originalExtras);
+			//PushPlugin.sendExtras(originalExtras);
+			//PushPlugin.putExtrasToList(originalExtras);
+			Log.v(TAG, "### PushPlugin: wanted to send from processPushBundle");
 		}
 	}
 
@@ -67,6 +69,7 @@ public class PushHandlerActivity extends Activity
     super.onResume();
     final NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
     notificationManager.cancelAll();
+    Log.v(TAG, "### PushHandlerActivity: notificationManager.cancelAll");
   }
 
 }

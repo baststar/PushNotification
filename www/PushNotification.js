@@ -19,6 +19,11 @@ PushNotification.prototype.register = function(successCallback, errorCallback, o
     cordova.exec(successCallback, errorCallback, "PushPlugin", "register", [options]);
 };
 
+PushNotification.prototype.resume = function(successCallback, errorCallback, options) {
+    console.log('## resume thing.');
+    cordova.exec(successCallback, errorCallback, "PushPlugin", "resume", [options]);
+};
+
 PushNotification.prototype.UserNotificationTypes = {
     Badge : "badge",
     Alert : "alert",

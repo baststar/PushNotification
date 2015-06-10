@@ -16,6 +16,7 @@ import org.apache.cordova.*;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import java.util.ArrayList;
 
 import java.io.IOException;
 
@@ -32,10 +33,17 @@ public class PushPlugin extends CordovaPlugin {
 	private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
 
 	private static CordovaWebView gWebView;
+	private static CordovaInterface gCordova;
 	private static String gECB;
 	private static String gSenderID;
 	private static Bundle gCachedExtras = null;
 	private static boolean gForeground = false;
+
+
+	public static final String RESUME = "resume";
+	private static boolean gFlagBackgroundNotification = false;
+
+	private static ArrayList<Bundle> gCachedExtrasList = new ArrayList<Bundle>();
 
 	/**
 	 * Gets the application context from cordova's main activity.
@@ -48,6 +56,11 @@ public class PushPlugin extends CordovaPlugin {
 
 	private Activity getApplicationActivity() {
 		return this.cordova.getActivity();
+	}
+
+	public static void putExtrasToList(Bundle extras){
+	    gCachedExtrasList.add(extras);
+	    //sendExtras(gCachedExtrasList);
 	}
 
 	GoogleCloudMessaging gcm;
@@ -63,18 +76,20 @@ public class PushPlugin extends CordovaPlugin {
 
 		if (REGISTER.equals(action)) {
 
-			Log.v(TAG, "execute: data=" + data.toString());
+			//Log.v(TAG, "execute: data=" + data.toString());
 
 			try {
 				JSONObject jo = data.getJSONObject(0);
 
 				gWebView = this.webView;
-				Log.v(TAG, "execute: jo=" + jo.toString());
+				gCordova = this.cordova;
+
+				//Log.v(TAG, "execute: jo=" + jo.toString());
 
 				gECB = (String) jo.get("ecb");
 				gSenderID = (String) jo.get("senderID");
 
-				Log.v(TAG, "execute: ECB=" + gECB + " senderID=" + gSenderID);
+				//Log.v(TAG, "execute: ECB=" + gECB + " senderID=" + gSenderID);
 
 				context = getApplicationContext();
 
@@ -93,11 +108,16 @@ public class PushPlugin extends CordovaPlugin {
 				callbackContext.error(e.getMessage());
 			}
 
-			if (gCachedExtras != null) {
-				Log.v(TAG, "sending cached extras");
-				sendExtras(gCachedExtras);
-				gCachedExtras = null;
+            if(gCachedExtrasList.size() > 0){
+                Log.v(TAG, "### sending cached extras");
+                sendExtras(gCachedExtrasList);
 			}
+
+			//if (gCachedExtras != null) {
+			//	Log.v(TAG, "sending cached extras");
+			//	sendExtras(gCachedExtras);
+			//	gCachedExtras = null;
+			//}
 
 		} else if (ARE_NOTIFICATIONS_ENABLED.equals(action)) {
 
@@ -120,6 +140,31 @@ public class PushPlugin extends CordovaPlugin {
 			Log.v(TAG, "UNREGISTER");
 			result = true;
 			callbackContext.success();
+		} else if(RESUME.equals(action)){
+			Log.v(TAG, "### PUSHPLUGIN NEW RESUME");
+			if (gFlagBackgroundNotification) {
+				callbackContext.success();
+				gFlagBackgroundNotification = false;
+				final NotificationManager notificationManager = (NotificationManager) cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
+                notificationManager.cancelAll();
+
+                if(gCachedExtrasList.size() > 0){
+                    Log.v(TAG, "###### sending cached extras on Resume");
+                    sendExtras(gCachedExtrasList);
+                }
+
+                //if (gCachedExtras != null) {
+                //    Log.v(TAG, "sending cached extras");
+                //    sendExtras(gCachedExtras);
+                //    gCachedExtras = null;
+                //} else {
+                //    Log.v(TAG, "no cached extras");
+                //}
+			}
+			else {
+				callbackContext.error("silence");
+			}
+			result = true;
 		} else {
 			result = false;
 			Log.e(TAG, "Invalid action : " + action);
@@ -127,6 +172,10 @@ public class PushPlugin extends CordovaPlugin {
 		}
 
 		return result;
+	}
+
+	public static void setFlagBackgroundNotification(Boolean val) {
+		gFlagBackgroundNotification = val;
 	}
 
 	/**
@@ -138,6 +187,7 @@ public class PushPlugin extends CordovaPlugin {
 	 * registration ID.
 	 */
 	private String getRegistrationId(Context context) {
+		Log.v(TAG, "### PushPlugin: getRegistrationId");
 		final SharedPreferences prefs = getGCMPreferences(context);
 		String registrationId = prefs.getString(PROPERTY_REG_ID, "");
 		if (registrationId.isEmpty()) {
@@ -164,7 +214,7 @@ public class PushPlugin extends CordovaPlugin {
 					gcm = GoogleCloudMessaging.getInstance(getApplicationContext());
 				}
 				regid = gcm.register(gSenderID);
-				Log.v(TAG, "Device registered, registration ID=" + regid);
+				//Log.v(TAG, "Device registered, registration ID=" + regid);
 				storeRegistrationId(getApplicationContext(), regid);
 				sendJavascript(new JSONObject().put("event", "registered").put("regid", regid));
 				callbackContext[0].success(regid);
@@ -215,7 +265,7 @@ public class PushPlugin extends CordovaPlugin {
    */
 	public static void sendJavascript(JSONObject _json) {
 		String _d = "javascript:" + gECB + "(" + _json.toString() + ")";
-		Log.v(TAG, "sendJavascript: " + _d);
+		//Log.v(TAG, "sendJavascript: " + _d);
 
 		if (gECB != null && gWebView != null) {
 			gWebView.sendJavascript(_d);
@@ -236,22 +286,53 @@ public class PushPlugin extends CordovaPlugin {
    * Sends the pushbundle extras to the client application.
    * If the client application isn't currently active, it is cached for later processing.
    */
-	public static void sendExtras(Bundle extras) {
-		if (extras != null) {
+	public static void sendExtras(ArrayList<Bundle> list) {
+		if (list != null) {
 			if (gECB != null && gWebView != null) {
-				sendJavascript(convertBundleToJson(extras));
+				Log.v(TAG, "### PushPlugin: sendExtras sending cached extras list");
+				if(list.size() > 0){
+                    for(int li = 0; li < list.size(); li++){
+                         Log.v(TAG, "### sending cached extras item");
+                        sendJavascript(convertBundleToJson(list.get(li)));
+                    }
+                }
+                list.clear();
+                cancelAllNotifications();
 			} else {
-				Log.v(TAG, "sendExtras: caching extras to send at a later time.");
-				gCachedExtras = extras;
+				Log.v(TAG, "### PushPlugin: sendExtras: caching extras to send at a later time.");
+				gCachedExtrasList = new ArrayList<Bundle>(list);
+				//gCachedExtras = extras;
 			}
 		}
 	}
+
+	public static void sendExtrasNow() {
+        if (gCachedExtrasList != null) {
+            if (gECB != null && gWebView != null) {
+                Log.v(TAG, "### PushPlugin: sendExtrasNow sending cached extras list");
+                if(gCachedExtrasList.size() > 0){
+                    for(int li = 0; li < gCachedExtrasList.size(); li++){
+                         Log.v(TAG, "### sending cached extras item");
+                        sendJavascript(convertBundleToJson(gCachedExtrasList.get(li)));
+                    }
+                }
+                gCachedExtrasList.clear();
+                cancelAllNotifications();
+            }
+        }
+    }
+
+    public static void cancelAllNotifications(){
+        final NotificationManager notificationManager = (NotificationManager) gCordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.cancelAll();
+    }
 
 	@Override
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
 		super.initialize(cordova, webView);
 		gForeground = true;
 		checkPlayServices();
+		Log.v(TAG, "### PushPlugin: initialize ####");
 	}
 
 	@Override
@@ -260,6 +341,7 @@ public class PushPlugin extends CordovaPlugin {
 		gForeground = false;
 		final NotificationManager notificationManager = (NotificationManager) cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
 		notificationManager.cancelAll();
+		Log.v(TAG, "### PushPlugin: onPause");
 	}
 
 	@Override
@@ -267,6 +349,7 @@ public class PushPlugin extends CordovaPlugin {
 		super.onResume(multitasking);
 		gForeground = true;
 		checkPlayServices();
+		Log.v(TAG, "### PushPlugin: onResume");
 	}
 
 	@Override
@@ -275,6 +358,7 @@ public class PushPlugin extends CordovaPlugin {
 		gForeground = false;
 		gECB = null;
 		gWebView = null;
+		Log.v(TAG, "### PushPlugin: onDestroy");
 	}
 
 	private boolean checkPlayServices() {
@@ -336,14 +420,14 @@ public class PushPlugin extends CordovaPlugin {
 								jsondata.put(key, value);
 							}
 						} else {
-							jsondata.put(key, value);
+						s	jsondata.put(key, value);
 						}
 					}
 				}
 			} // while
 			json.put("payload", jsondata);
 
-			Log.v(TAG, "extrasToJSON: " + json.toString());
+			//Log.v(TAG, "extrasToJSON: " + json.toString());
 
 			return json;
 		} catch (JSONException e) {
@@ -353,10 +437,12 @@ public class PushPlugin extends CordovaPlugin {
 	}
 
 	public static boolean isInForeground() {
+		Log.v(TAG, "### PushPlugin: isInForeground");
 		return gForeground;
 	}
 
 	public static boolean isActive() {
+		Log.v(TAG, "### PushPlugin: isActive");
 		return gWebView != null;
 	}
 }
