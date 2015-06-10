@@ -289,10 +289,9 @@ public class PushPlugin extends CordovaPlugin {
 	public static void sendExtras(ArrayList<Bundle> list) {
 		if (list != null) {
 			if (gECB != null && gWebView != null) {
-				Log.v(TAG, "### PushPlugin: sendExtras sending cached extras list");
 				if(list.size() > 0){
                     for(int li = 0; li < list.size(); li++){
-                         Log.v(TAG, "### sending cached extras item");
+                         Log.v(TAG, "### sending cached extras");
                         sendJavascript(convertBundleToJson(list.get(li)));
                     }
                 }
@@ -312,7 +311,7 @@ public class PushPlugin extends CordovaPlugin {
                 Log.v(TAG, "### PushPlugin: sendExtrasNow sending cached extras list");
                 if(gCachedExtrasList.size() > 0){
                     for(int li = 0; li < gCachedExtrasList.size(); li++){
-                         Log.v(TAG, "### sending cached extras item");
+                         Log.v(TAG, "### sending cached extras");
                         sendJavascript(convertBundleToJson(gCachedExtrasList.get(li)));
                     }
                 }
@@ -420,7 +419,7 @@ public class PushPlugin extends CordovaPlugin {
 								jsondata.put(key, value);
 							}
 						} else {
-						s	jsondata.put(key, value);
+							jsondata.put(key, value);
 						}
 					}
 				}
