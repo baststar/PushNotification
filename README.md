@@ -1,3 +1,24 @@
+Modifications
+
+         .run(function(){
+           document.addEventListener("resume", function () {
+             if(window.plugins.pushNotification){
+               window.plugins.pushNotification.resume(trueFlagBackgroundNotificationResumeHandler,falseFlagBackgroundNotificationResumeHandler,{});
+             } else {
+               console.log('pushNotification-plugin not found');
+             }
+           });
+           		   
+           function trueFlagBackgroundNotificationResumeHandler(){
+             console.log('trueFlagBackgroundNotificationResumeHandler');
+           }
+           function falseFlagBackgroundNotificationResumeHandler(){
+             console.log('falseFlagBackgroundNotificationResumeHandler');
+           }
+         })
+
+
+
 # Telerik Push Notifications Plugin
 
 ## Description
