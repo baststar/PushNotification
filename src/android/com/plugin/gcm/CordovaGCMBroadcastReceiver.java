@@ -97,7 +97,7 @@ public class CordovaGCMBroadcastReceiver extends WakefulBroadcastReceiver {
 		notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 		notificationIntent.putExtra("pushBundle", extras);
 
-		PendingIntent contentIntent = PendingIntent.getActivity(context, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+		PendingIntent contentIntent = PendingIntent.getActivity(context, notId, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
 		int defaults = Notification.DEFAULT_ALL;
 
@@ -143,9 +143,9 @@ public class CordovaGCMBroadcastReceiver extends WakefulBroadcastReceiver {
 					actionIntent.putExtra(PushHandlerActivity.NOTIFICATION_ID, notId);
 					PendingIntent actionPendingIntent;
 					if (doNothing) {
-						actionPendingIntent = PendingIntent.getBroadcast(context, i+1, actionIntent, 0);
+						actionPendingIntent = PendingIntent.getBroadcast(context, notId+i+1, actionIntent, 0);
 					} else {
-						actionPendingIntent = PendingIntent.getActivity(context, i+1, actionIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+						actionPendingIntent = PendingIntent.getActivity(context, notId+i+1, actionIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 					}
 					mBuilder = mBuilder.addAction(getSmallIcon(context, actionExtras), action.getString("title"), actionPendingIntent);
 				}
